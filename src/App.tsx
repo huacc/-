@@ -10,7 +10,6 @@ import Model from './pages/Model';
 import { initializeAppData } from './services/dataInitializer';
 
 const App: React.FC = () => {
-  
   // 应用启动时初始化数据
   useEffect(() => {
     initializeAppData();

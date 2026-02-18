@@ -1,26 +1,15 @@
 
-/**
- * 提示词类型定义
- */
 export type PromptType = 'knowledge_extraction' | 'ontology_modeling' | 'query_analysis' | 'custom';
 
-/**
- * 工作流步骤定义
- */
 export interface WorkflowStep {
   id: string;
   logic: string;
   example?: string;
 }
 
-/**
- * 结构化提示词数据模型
- */
 export interface PromptStructure {
-  // 元数据
   type: PromptType;
   
-  // Tab1: 角色定义
   role: {
     identity: string;
     expertise: string[];
@@ -28,7 +17,6 @@ export interface PromptStructure {
     example: string;
   };
 
-  // Tab2: 分析逻辑
   logic: {
     principles: string;
     method: string;
@@ -36,16 +24,13 @@ export interface PromptStructure {
     example: string;
   };
 
-  // Tab3: 工作流程
   workflow: WorkflowStep[];
 
-  // Tab4: 质量控制
   quality: {
     checkpoints: string[];
     avoidance: string[];
   };
 
-  // Tab5: 变量定义
   variables: Array<{
     name: string;
     description?: string;
@@ -53,16 +38,13 @@ export interface PromptStructure {
   }>;
 }
 
-/**
- * 提示词模板完整对象
- */
 export interface PromptTemplate {
   id: string;
   name: string;
   description?: string;
   categoryId: string;
-  content?: string; // 旧格式兼容
-  structure?: PromptStructure; // 新结构化数据
+  content?: string; 
+  structure?: PromptStructure; 
   tags: string[];
   createdAt: string;
   updatedAt: string;
