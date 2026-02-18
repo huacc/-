@@ -1,0 +1,5 @@
+{
+  "name": "PsychAnalysis AI Platform",
+  "description": "A P0 stage AI Middleware for Psychological Analysis featuring Ontology Management, Knowledge Graph Construction, Prompt Engineering, and Model Scheduling.",
+  "requestFramePermissions": []
+}
