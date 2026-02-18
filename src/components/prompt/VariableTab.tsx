@@ -26,7 +26,7 @@ const VariableTab: React.FC<VariableTabProps> = ({ data, fullStructure, onChange
     // 同步到数据结构：保留现有配置，添加新变量，移除不存在的变量
     const currentVars = [...data];
     const newVars: PromptStructure['variables'] = [];
-    const scannedNames = Array.from(map.keys());
+    const scannedNames = Array.from(map.keys()) as string[];
 
     // 1. 处理扫描到的变量
     scannedNames.forEach(name => {

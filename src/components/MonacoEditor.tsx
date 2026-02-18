@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Editor, { OnMount, OnChange } from '@monaco-editor/react';
 
@@ -109,6 +110,3 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 };
 
 export default MonacoEditor;
-
-// 示例用法:
-// <MonacoEditor value={content} onChange={setContent} language="prompt-template" theme="prompt-theme" />

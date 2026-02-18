@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen } from 'lucide-react';
 import { OntologyCategory } from '../types/ontology';

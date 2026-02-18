@@ -4,68 +4,55 @@ import GraphCanvas, { GraphCanvasRef } from '../components/GraphCanvas';
 import CategoryTree from '../components/CategoryTree';
 import OntologyForm from '../components/OntologyForm';
 import { OntologyNode } from '../mocks/ontologyGraphData';
-import { MOCK_ONTOLOGY_CATEGORIES, MOCK_ONTOLOGIES } from '../mocks/ontologyData';
+import { MOCK_ONTOLOGIES, MOCK_ONTOLOGY_CATEGORIES } from '../mocks/ontologyData';
 import { OntologyType, OntologyCategory, Ontology } from '../types/ontology';
 import Toast from '../components/Toast';
 import { transformToGraphData } from '../utils/ontologyGraphAdapter';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const OntologyPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'definition' | 'graph'>('definition');
   
-  // Definition Tab State
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Mock Data State (in-memory persistence for demo)
-  const [ontologies, setOntologies] = useState<Ontology[]>(MOCK_ONTOLOGIES);
+  // Use localStorage for persistence
+  const [ontologies, setOntologies] = useLocalStorage<Ontology[]>(STORAGE_KEYS.ONTOLOGIES, MOCK_ONTOLOGIES);
+  const [categories] = useLocalStorage<OntologyCategory[]>(STORAGE_KEYS.ONTOLOGY_CATEGORIES, MOCK_ONTOLOGY_CATEGORIES);
   
-  // Form State
   const [viewMode, setViewMode] = useState<'list' | 'form'>('list');
   const [editingOntology, setEditingOntology] = useState<Ontology | null>(null);
   
-  // Graph Tab State
   const graphRef = useRef<GraphCanvasRef>(null);
   const [graphMode, setGraphMode] = useState<'default' | 'pan'>('default');
   const [selectedNode, setSelectedNode] = useState<OntologyNode | null>(null);
 
-  // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // --- Logic for Definition Tab ---
-  
-  const getCategoryIdsInSubtree = (categories: OntologyCategory[], rootId: string): string[] => {
+  const getCategoryIdsInSubtree = (cats: OntologyCategory[], rootId: string): string[] => {
     let ids: string[] = [];
-    const find = (cats: OntologyCategory[], targetFound: boolean) => {
-      for (const cat of cats) {
-        if (cat.id === rootId || targetFound) {
-          ids.push(cat.id);
-          if (cat.children) find(cat.children, true);
-        } else {
-          if (cat.children) find(cat.children, false);
-        }
-      }
-    };
     if (rootId === 'all') {
-      const collectAll = (cats: OntologyCategory[]) => {
-        for (const cat of cats) {
-          ids.push(cat.id);
-          if (cat.children) collectAll(cat.children);
-        }
+      const collectAll = (list: OntologyCategory[]) => {
+        list.forEach(c => {
+          ids.push(c.id);
+          if (c.children) collectAll(c.children);
+        });
       };
-      collectAll(categories);
+      collectAll(cats);
       return ids;
     }
-    const findAndCollect = (cats: OntologyCategory[]): boolean => {
-      for (const cat of cats) {
+    const findAndCollect = (list: OntologyCategory[]): boolean => {
+      for (const cat of list) {
         if (cat.id === rootId) {
           ids.push(cat.id);
-          const collect = (subCats: OntologyCategory[]) => {
-            for(const c of subCats) {
+          const collect = (subList: OntologyCategory[]) => {
+            subList.forEach(c => {
               ids.push(c.id);
-              if(c.children) collect(c.children);
-            }
-          }
-          if(cat.children) collect(cat.children);
+              if (c.children) collect(c.children);
+            });
+          };
+          if (cat.children) collect(cat.children);
           return true;
         }
         if (cat.children) {
@@ -74,12 +61,12 @@ const OntologyPage: React.FC = () => {
       }
       return false;
     };
-    findAndCollect(categories);
+    findAndCollect(cats);
     return ids;
   };
 
   const filteredOntologies = useMemo(() => {
-    let categoryIds = getCategoryIdsInSubtree(MOCK_ONTOLOGY_CATEGORIES, selectedCategoryId);
+    let categoryIds = getCategoryIdsInSubtree(categories, selectedCategoryId);
     let result = ontologies.filter(ont => categoryIds.includes(ont.categoryId));
 
     if (searchQuery.trim()) {
@@ -91,7 +78,7 @@ const OntologyPage: React.FC = () => {
       );
     }
     return result;
-  }, [selectedCategoryId, searchQuery, ontologies]);
+  }, [selectedCategoryId, searchQuery, ontologies, categories]);
 
   const getTypeColor = (type: OntologyType) => {
     switch (type) {
@@ -125,20 +112,15 @@ const OntologyPage: React.FC = () => {
 
   const handleFormSave = (data: Ontology) => {
     if (editingOntology) {
-      // Update
       setOntologies(prev => prev.map(o => o.id === data.id ? data : o));
       setToast({ message: '本体更新成功', type: 'success' });
     } else {
-      // Create
       setOntologies(prev => [...prev, data]);
       setToast({ message: '本体创建成功', type: 'success' });
     }
     setViewMode('list');
   };
 
-  // --- Logic for Graph Tab ---
-
-  // Dynamic Graph Data derived from the ontology list
   const graphData = useMemo(() => transformToGraphData(ontologies), [ontologies]);
 
   const handleZoomIn = () => graphRef.current?.zoomIn();
@@ -164,7 +146,6 @@ const OntologyPage: React.FC = () => {
         />
       )}
 
-      {/* Header Actions */}
       <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
         <div className="flex items-center space-x-2">
           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -185,7 +166,6 @@ const OntologyPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="bg-white rounded-t-lg border-b border-gray-200 px-4 pt-2">
         <div className="flex space-x-6">
           <button
@@ -211,12 +191,9 @@ const OntologyPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 bg-white rounded-b-lg shadow-sm p-0 overflow-hidden flex relative">
         {activeTab === 'definition' ? (
-          /* Tab 1: Definition View */
           <div className="flex w-full h-full">
-            {/* Left Tree */}
             <div className="w-[280px] border-r border-gray-200 flex flex-col bg-gray-50/30">
               <div className="p-4 border-b border-gray-100">
                 <div className="relative">
@@ -232,23 +209,22 @@ const OntologyPage: React.FC = () => {
               </div>
               <div className="flex-1 overflow-y-auto p-2">
                 <CategoryTree 
-                  categories={MOCK_ONTOLOGY_CATEGORIES} 
+                  categories={categories} 
                   selectedId={selectedCategoryId}
                   onSelect={(id) => {
                     setSelectedCategoryId(id);
-                    if (viewMode === 'form') setViewMode('list'); // Switch back to list on category change if desired
+                    if (viewMode === 'form') setViewMode('list'); 
                   }}
                 />
               </div>
             </div>
             
-            {/* Right Details (Ontology List OR Form) */}
             <div className="flex-1 overflow-y-auto bg-white relative">
               {viewMode === 'list' ? (
                 <div className="p-6">
                   <div className="mb-4 flex justify-between items-center">
                     <h2 className="text-base font-semibold text-gray-800">
-                      {selectedCategoryId === 'all' ? '全部本体' : MOCK_ONTOLOGY_CATEGORIES.flatMap(c => [c, ...(c.children||[]).flatMap(cc => [cc, ...(cc.children||[])])]).find(c => c.id === selectedCategoryId)?.name || '本体列表'}
+                      {selectedCategoryId === 'all' ? '全部本体' : '本体列表'}
                       <span className="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{filteredOntologies.length}</span>
                     </h2>
                   </div>
@@ -268,7 +244,6 @@ const OntologyPage: React.FC = () => {
                               </div>
                               <p className="text-sm text-gray-600 line-clamp-2">{ontology.description || '暂无描述'}</p>
                               
-                              {/* Properties & Relations Preview */}
                               <div className="mt-3 flex space-x-4 text-xs">
                                 <span className="bg-gray-50 px-2 py-1 rounded text-gray-500 border border-gray-100">
                                   属性: <span className="font-medium text-gray-700">{ontology.properties?.length || 0}</span>
@@ -317,10 +292,9 @@ const OntologyPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                /* Form Mode */
                 <OntologyForm 
                   initialData={editingOntology}
-                  categories={MOCK_ONTOLOGY_CATEGORIES}
+                  categories={categories}
                   ontologyList={ontologies}
                   onSave={handleFormSave}
                   onCancel={() => setViewMode('list')}
@@ -329,9 +303,7 @@ const OntologyPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Tab 2: Graph View */
           <div className="w-full h-full relative flex">
-             {/* Toolbar Overlay */}
              <div className="absolute top-4 left-4 bg-white p-1.5 rounded-lg shadow-md border border-gray-200 flex space-x-1 z-10">
                 <button 
                   onClick={() => handleModeChange('default')}
@@ -359,7 +331,6 @@ const OntologyPage: React.FC = () => {
                 </button>
              </div>
              
-             {/* G6 Graph Canvas (Use Dynamic Graph Data) */}
              <div className="flex-1 relative">
                 <GraphCanvas 
                   ref={graphRef} 
@@ -368,7 +339,6 @@ const OntologyPage: React.FC = () => {
                 />
              </div>
 
-             {/* Right Details Drawer */}
              {selectedNode && (
                <div className="w-[300px] border-l border-gray-200 bg-white flex flex-col shadow-xl z-20 absolute right-0 top-0 bottom-0 animate-in slide-in-from-right duration-200">
                  <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">

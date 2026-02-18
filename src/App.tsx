@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -7,14 +6,8 @@ import Ontology from './pages/Ontology';
 import Knowledge from './pages/Knowledge';
 import Prompt from './pages/Prompt';
 import Model from './pages/Model';
-import { initializeAppData } from './services/dataInitializer';
 
 const App: React.FC = () => {
-  // 应用启动时初始化数据
-  useEffect(() => {
-    initializeAppData();
-  }, []);
-
   return (
     <HashRouter>
       <Layout>

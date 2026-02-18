@@ -16,9 +16,16 @@ const Prompt: React.FC = () => {
   const [categories, setCategories] = useLocalStorage<PromptCategory[]>(STORAGE_KEYS.PROMPT_CATEGORIES, MOCK_PROMPT_CATEGORIES);
   
   // --- UI State ---
-  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(templates.length > 0 ? templates[0].id : null);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
+  // Initialize selection if needed
+  useEffect(() => {
+    if (!currentTemplateId && templates.length > 0) {
+      setCurrentTemplateId(templates[0].id);
+    }
+  }, [templates.length]); // Only run if templates array length changes from 0 to 1
+
   // Derived Data
   const currentTemplate = templates.find(t => t.id === currentTemplateId);
   const [editingTitle, setEditingTitle] = useState('');
@@ -35,7 +42,7 @@ const Prompt: React.FC = () => {
     } else {
       setEditingTitle('');
     }
-  }, [currentTemplateId, templates]); // Depend on templates to refresh if list changes
+  }, [currentTemplateId, templates]);
 
   // --- CRUD Handlers ---
 
@@ -48,7 +55,7 @@ const Prompt: React.FC = () => {
         ? { 
             ...t, 
             structure: newStructure, 
-            name: editingTitle, // Also save title if changed
+            name: editingTitle, // Also save title if changed in header
             updatedAt: new Date().toISOString() 
           } 
         : t
@@ -57,16 +64,35 @@ const Prompt: React.FC = () => {
     setToast({ message: '提示词保存成功', type: 'success' });
   };
 
-  // 2. Select Template
-  const handleSelectTemplate = (id: string) => {
-    // Optional: Add check for unsaved changes here
-    setCurrentTemplateId(id);
-    setTestResult(null); // Clear test result
+  // 2. Rename Template
+  const handleRenameTemplate = (id: string, newName: string) => {
+    const updatedTemplates = templates.map(t => 
+      t.id === id ? { ...t, name: newName, updatedAt: new Date().toISOString() } : t
+    );
+    setTemplates(updatedTemplates);
+    setToast({ message: '提示词重命名成功', type: 'success' });
   };
 
-  // 3. Add Category
+  // 3. Rename Category
+  const handleRenameCategory = (id: string, newName: string) => {
+    const updateCat = (cats: PromptCategory[]): PromptCategory[] => {
+      return cats.map(cat => {
+        if (cat.id === id) {
+          return { ...cat, name: newName };
+        }
+        if (cat.children) {
+          return { ...cat, children: updateCat(cat.children) };
+        }
+        return cat;
+      });
+    };
+    setCategories(updateCat(categories));
+    setToast({ message: '分类重命名成功', type: 'success' });
+  };
+
+  // 4. Add Category
   const handleAddCategory = (parentId?: string) => {
-    const name = prompt('请输入分类名称:');
+    const name = window.prompt('请输入分类名称:', '新分类');
     if (!name) return;
 
     const newCategory: PromptCategory = {
@@ -76,10 +102,8 @@ const Prompt: React.FC = () => {
     };
 
     if (!parentId) {
-      // Add root category
       setCategories([...categories, newCategory]);
     } else {
-      // Add sub category (recursive update)
       const addSubCat = (cats: PromptCategory[]): PromptCategory[] => {
         return cats.map(cat => {
           if (cat.id === parentId) {
@@ -96,28 +120,23 @@ const Prompt: React.FC = () => {
     setToast({ message: '分类创建成功', type: 'success' });
   };
 
-  // 4. Delete Category
+  // 5. Delete Category
   const handleDeleteCategory = (id: string) => {
-    // Recursive delete filter
     const deleteCat = (cats: PromptCategory[]): PromptCategory[] => {
       return cats.filter(c => c.id !== id).map(c => ({
         ...c,
         children: c.children ? deleteCat(c.children) : []
       }));
     };
-    
-    // Also move templates in this category to "Uncategorized" or delete them?
-    // For simplicity, we keep templates but they become "orphaned" in UI if we don't handle.
-    // Better strategy: Don't allow delete if not empty, OR move to a default cat.
-    // Here we implement: Recursively remove category. Templates pointing to it will be hidden from tree.
-    // Real implementation should probably reassign templates.
+    // WARNING: This assumes templates are filtered by categoryId in the UI. 
+    // Real app might need to check for orphaned templates.
     setCategories(deleteCat(categories));
     setToast({ message: '分类已删除', type: 'success' });
   };
 
-  // 5. Add Template
+  // 6. Add Template
   const handleAddTemplate = (categoryId: string) => {
-    const name = prompt('请输入提示词名称:', '新提示词');
+    const name = window.prompt('请输入提示词名称:', '新提示词');
     if (!name) return;
 
     const newTemplate: PromptTemplate = {
@@ -127,8 +146,8 @@ const Prompt: React.FC = () => {
       tags: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      structure: { // Default structure
-        type: 'custom',
+      structure: { 
+        type: 'knowledge_extraction', // Default type
         role: { identity: '', expertise: [], capabilities: [], example: '' },
         logic: { principles: '', method: '', constraints: [], example: '' },
         workflow: [],
@@ -142,7 +161,7 @@ const Prompt: React.FC = () => {
     setToast({ message: '提示词创建成功', type: 'success' });
   };
 
-  // 6. Delete Template
+  // 7. Delete Template
   const handleDeleteTemplate = (id: string) => {
     setTemplates(templates.filter(t => t.id !== id));
     if (currentTemplateId === id) {
@@ -153,7 +172,6 @@ const Prompt: React.FC = () => {
 
   const handleTest = async () => {
     setIsTesting(true);
-    // Simulate API call
     setTimeout(() => {
       setTestResult('测试结果：AI 响应内容...\n\n(此处为 Mock 数据，Phase 4 将接入真实 LLM)');
       setIsTesting(false);
@@ -171,11 +189,13 @@ const Prompt: React.FC = () => {
           categories={categories}
           templates={templates}
           selectedTemplateId={currentTemplateId}
-          onSelectTemplate={handleSelectTemplate}
+          onSelectTemplate={setCurrentTemplateId}
           onAddCategory={handleAddCategory}
           onDeleteCategory={handleDeleteCategory}
+          onRenameCategory={handleRenameCategory}
           onAddTemplate={handleAddTemplate}
           onDeleteTemplate={handleDeleteTemplate}
+          onRenameTemplate={handleRenameTemplate}
         />
       </div>
 
@@ -189,6 +209,12 @@ const Prompt: React.FC = () => {
                    className="text-lg font-bold text-gray-800 border-none focus:ring-0 p-0 bg-transparent w-full focus:outline-none placeholder-gray-400" 
                    value={editingTitle}
                    onChange={(e) => setEditingTitle(e.target.value)}
+                   onBlur={() => {
+                     // Auto-save title on blur if changed
+                     if (editingTitle !== currentTemplate.name) {
+                       handleRenameTemplate(currentTemplate.id, editingTitle);
+                     }
+                   }}
                    placeholder="请输入提示词名称"
                  />
               </div>
@@ -201,7 +227,7 @@ const Prompt: React.FC = () => {
 
             <div className="flex-1 overflow-hidden relative">
               <StructuredPromptEditor 
-                key={currentTemplate.id} // Force re-render on switch
+                key={currentTemplate.id} // Important: Force remount when switching templates
                 initialData={currentTemplate.structure}
                 onSave={handleSaveStructure}
               />

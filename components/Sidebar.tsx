@@ -2,13 +2,13 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Network, // For Ontology (DeploymentUnitOutlined equiv)
-  Database, // For Knowledge (DatabaseOutlined equiv)
-  FileText, // For Prompt (FileTextOutlined equiv)
-  Cpu, // For Model (ApiOutlined equiv)
+  Network, 
+  Database, 
+  FileText, 
+  Cpu, 
   Settings
 } from 'lucide-react';
-import { NavItem } from '../types';
+import { NavItem } from '../types/common';
 
 const NAV_ITEMS: NavItem[] = [
   { label: '仪表盘', path: '/', icon: LayoutDashboard },

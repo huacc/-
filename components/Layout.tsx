@@ -1,7 +1,7 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { LayoutProps } from '../types';
+import { LayoutProps } from '../types/common';
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (

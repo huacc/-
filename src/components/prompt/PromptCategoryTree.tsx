@@ -8,7 +8,7 @@ import {
   ChevronDown, 
   Plus, 
   Trash2, 
-  MoreHorizontal,
+  Edit2, // Added Edit icon
   Search
 } from 'lucide-react';
 import { PromptCategory, PromptTemplate } from '../../types/prompt';
@@ -20,8 +20,10 @@ interface PromptCategoryTreeProps {
   onSelectTemplate: (id: string) => void;
   onAddCategory: (parentId?: string) => void;
   onDeleteCategory: (id: string) => void;
+  onRenameCategory: (id: string, newName: string) => void; // New prop
   onAddTemplate: (categoryId: string) => void;
   onDeleteTemplate: (id: string) => void;
+  onRenameTemplate: (id: string, newName: string) => void; // New prop
   className?: string;
 }
 
@@ -37,14 +39,16 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onSelectTemplate,
   onAddCategory,
   onDeleteCategory,
+  onRenameCategory,
   onAddTemplate,
   onDeleteTemplate,
+  onRenameTemplate,
   level
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
-  // 获取当前分类下的模板
+  // Filter templates for this category
   const categoryTemplates = templates.filter(t => t.categoryId === category.id);
   const hasChildren = (category.children && category.children.length > 0) || categoryTemplates.length > 0;
 
@@ -62,18 +66,26 @@ const TreeNode: React.FC<TreeNodeProps> = ({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`确定要删除分类 "${category.name}" 吗？该操作不可恢复。`)) {
+    if (window.confirm(`确定要删除分类 "${category.name}" 及其所有内容吗？`)) {
       onDeleteCategory(category.id);
+    }
+  };
+
+  const handleRenameClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newName = window.prompt('重命名分类:', category.name);
+    if (newName && newName.trim() !== '') {
+      onRenameCategory(category.id, newName.trim());
     }
   };
 
   return (
     <div>
-      {/* Category Row */}
+      {/* Category Node */}
       <div
         className={`
           group flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-md transition-colors text-sm mb-0.5
-          text-gray-700 hover:bg-gray-100
+          text-gray-700 hover:bg-gray-100 select-none
         `}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={() => setIsExpanded(!isExpanded)}
@@ -91,21 +103,20 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             {isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />}
           </span>
           
-          <span className="truncate font-medium">{category.name}</span>
+          <span className="truncate font-medium" title={category.name}>{category.name}</span>
           <span className="ml-2 text-xs text-gray-400">({categoryTemplates.length})</span>
         </div>
 
         {/* Category Actions (Hover) */}
-        <div className={`flex items-center space-x-1 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
+        <div className={`flex items-center space-x-0.5 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
           <button 
             onClick={handleAddTemplateClick}
             className="p-1 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded"
-            title="在此分类下新建提示词"
+            title="新建提示词"
           >
             <Plus size={14} />
           </button>
-          {/* 暂时只支持一级分类添加子分类，避免层级过深 */}
-          {level < 1 && (
+          {level < 2 && ( // Limit nesting depth
              <button 
              onClick={handleAddSubCategoryClick}
              className="p-1 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded"
@@ -114,6 +125,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
              <Folder size={14} />
            </button>
           )}
+          <button 
+            onClick={handleRenameClick}
+            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+            title="重命名"
+          >
+            <Edit2 size={14} />
+          </button>
           <button 
             onClick={handleDeleteClick}
             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
@@ -137,41 +155,62 @@ const TreeNode: React.FC<TreeNodeProps> = ({
               onSelectTemplate={onSelectTemplate}
               onAddCategory={onAddCategory}
               onDeleteCategory={onDeleteCategory}
+              onRenameCategory={onRenameCategory}
               onAddTemplate={onAddTemplate}
               onDeleteTemplate={onDeleteTemplate}
+              onRenameTemplate={onRenameTemplate}
               level={level + 1}
             />
           ))}
 
-          {/* Templates in this category */}
+          {/* Templates */}
           {categoryTemplates.map((template) => (
             <div
               key={template.id}
               className={`
                 group flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-md transition-colors text-sm mb-0.5
                 ${selectedTemplateId === template.id 
-                  ? 'bg-brand-50 text-brand-700 border border-brand-100' 
+                  ? 'bg-brand-50 text-brand-700 border border-brand-100 font-medium' 
                   : 'text-gray-600 hover:bg-gray-50 border border-transparent'}
               `}
               style={{ paddingLeft: `${(level + 1) * 12 + 24}px` }}
-              onClick={() => onSelectTemplate(template.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectTemplate(template.id);
+              }}
             >
               <div className="flex items-center overflow-hidden">
                 <FileText size={14} className={`mr-2 flex-shrink-0 ${selectedTemplateId === template.id ? 'text-brand-500' : 'text-gray-400'}`} />
-                <span className="truncate">{template.name}</span>
+                <span className="truncate" title={template.name}>{template.name}</span>
               </div>
               
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if(confirm(`确定要删除提示词 "${template.name}" 吗？`)) {
-                    onDeleteTemplate(template.id);
-                  }
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded transition-opacity"
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newName = window.prompt('重命名提示词:', template.name);
+                    if (newName && newName.trim()) {
+                      onRenameTemplate(template.id, newName.trim());
+                    }
+                  }}
+                  className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                  title="重命名"
+                >
+                  <Edit2 size={13} />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if(window.confirm(`确定要删除提示词 "${template.name}" 吗？`)) {
+                      onDeleteTemplate(template.id);
+                    }
+                  }}
+                  className="p-1 text-gray-400 hover:text-red-600 rounded"
+                  title="删除"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -187,23 +226,25 @@ const PromptCategoryTree: React.FC<PromptCategoryTreeProps> = ({
   onSelectTemplate,
   onAddCategory,
   onDeleteCategory,
+  onRenameCategory,
   onAddTemplate,
   onDeleteTemplate,
+  onRenameTemplate,
   className 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 简单的搜索过滤逻辑
-  const filterCategories = (cats: PromptCategory[]): PromptCategory[] => {
-    if (!searchTerm) return cats;
-    // 这里仅做简单的顶层过滤展示，实际应用可能需要更复杂的树形搜索
-    return cats.filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.children && c.children.some(child => child.name.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
+  // Recursive filtering for search
+  const filterCategory = (category: PromptCategory, term: string): boolean => {
+    const nameMatch = category.name.toLowerCase().includes(term);
+    const hasMatchingTemplate = templates.some(t => t.categoryId === category.id && t.name.toLowerCase().includes(term));
+    const hasMatchingChildren = category.children?.some(child => filterCategory(child, term)) ?? false;
+    return nameMatch || hasMatchingTemplate || hasMatchingChildren;
   };
 
-  const filteredCategories = filterCategories(categories);
+  const filteredCategories = searchTerm 
+    ? categories.filter(c => filterCategory(c, searchTerm.toLowerCase()))
+    : categories;
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -225,7 +266,7 @@ const PromptCategoryTree: React.FC<PromptCategoryTreeProps> = ({
           <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
           <input 
             type="text"
-            placeholder="搜索分类..."
+            placeholder="搜索..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 focus:bg-white transition-all"
@@ -245,14 +286,16 @@ const PromptCategoryTree: React.FC<PromptCategoryTreeProps> = ({
               onSelectTemplate={onSelectTemplate}
               onAddCategory={onAddCategory}
               onDeleteCategory={onDeleteCategory}
+              onRenameCategory={onRenameCategory}
               onAddTemplate={onAddTemplate}
               onDeleteTemplate={onDeleteTemplate}
+              onRenameTemplate={onRenameTemplate}
               level={0}
             />
           ))
         ) : (
           <div className="text-center py-8 text-gray-400 text-xs">
-            {searchTerm ? '未找到匹配的分类' : '暂无分类，请点击上方 + 号添加'}
+            {searchTerm ? '未找到匹配项' : '暂无分类，请点击 + 号添加'}
           </div>
         )}
       </div>

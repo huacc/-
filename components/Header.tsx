@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, User, ChevronRight } from 'lucide-react';
+import { Bell, ChevronRight } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {

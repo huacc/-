@@ -18,12 +18,14 @@ const Header: React.FC = () => {
 
   return (
     <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6 sticky top-0 z-40">
+      {/* Breadcrumb Area */}
       <div className="flex items-center text-sm text-gray-500">
         <span className="hover:text-brand-600 cursor-pointer transition-colors">首页</span>
         <ChevronRight size={14} className="mx-2" />
         <span className="font-medium text-gray-800">{getBreadcrumb()}</span>
       </div>
 
+      {/* Right Actions */}
       <div className="flex items-center space-x-4">
         <button className="p-2 text-gray-400 hover:text-brand-600 transition-colors relative">
           <Bell size={20} />

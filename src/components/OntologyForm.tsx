@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Save, X, Plus, Trash2, HelpCircle } from 'lucide-react';
 import { Ontology, OntologyProperty, OntologyRelation, OntologyCategory, OntologyType } from '../types/ontology';

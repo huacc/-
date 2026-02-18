@@ -118,6 +118,3 @@ const DynamicList: React.FC<DynamicListProps> = ({
 };
 
 export default DynamicList;
-
-// 示例用法：
-// <DynamicList items={constraints} onChange={setConstraints} placeholder="输入约束条件..." />
